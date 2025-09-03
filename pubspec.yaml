@@ -38,10 +38,16 @@ dependencies:
   # Hardware resources dependencies
   flutter_blue_plus: ^1.32.7
   geolocator: ^10.1.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
+  geocoding: ^2.1.1
   permission_handler: ^11.3.1
   connectivity_plus: ^5.0.2
+  network_info_plus: ^4.1.0
   sensors_plus: ^4.0.2
   audioplayers: ^5.2.1
+  flutter_sound: ^9.2.13
+  path_provider: ^2.1.2
   camera: ^0.10.5+9
   image_picker: ^1.0.7
 
