@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'dart:async';
+import '../controllers/audio_controller.dart';
 
 class AudioPage extends StatefulWidget {
   const AudioPage({super.key});
@@ -10,88 +9,75 @@ class AudioPage extends StatefulWidget {
 }
 
 class _AudioPageState extends State<AudioPage> {
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  
-  bool _isRecording = false;
-  bool _isPlaying = false;
-  bool _hasRecording = false;
-  Duration _recordingDuration = Duration.zero;
-  Timer? _recordingTimer;
+  late AudioController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller = AudioController();
+    _controller.addListener(_onControllerUpdate);
+    _initializeAudio();
+  }
+
+  void _onControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _initializeAudio() async {
+    final error = await _controller.initializeAudio();
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
   }
 
   Future<void> _startRecording() async {
-    // Simulação de gravação para compatibilidade multiplataforma
-    setState(() {
-      _isRecording = true;
-      _recordingDuration = Duration.zero;
-    });
-
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _recordingDuration = Duration(seconds: timer.tick);
-      });
-    });
+    final error = await _controller.startRecording();
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
   }
 
   Future<void> _stopRecording() async {
-    _recordingTimer?.cancel();
-    
-    setState(() {
-      _isRecording = false;
-      _hasRecording = true;
-    });
-    
-    if (mounted) {
+    final error = await _controller.stopRecording();
+    if (error == null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gravação simulada concluída!')),
+        const SnackBar(content: Text('Gravação concluída!')),
+      );
+    } else if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
       );
     }
   }
 
   Future<void> _playRecording() async {
-    if (_hasRecording) {
-      try {
-        // Simular reprodução de áudio
-        setState(() {
-          _isPlaying = true;
-        });
-
-        // Simular duração de reprodução
-        Timer(const Duration(seconds: 3), () {
-          if (mounted) {
-            setState(() {
-              _isPlaying = false;
-            });
-          }
-        });
-      } catch (e) {
-        print('Erro ao reproduzir áudio: $e');
-      }
+    final error = await _controller.playRecording();
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
     }
   }
 
   Future<void> _stopPlaying() async {
-    await _audioPlayer.stop();
-    setState(() {
-      _isPlaying = false;
-    });
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+    final error = await _controller.stopPlaying();
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
-    _recordingTimer?.cancel();
+    _controller.removeListener(_onControllerUpdate);
+    _controller.dispose();
     super.dispose();
   }
 
@@ -127,10 +113,10 @@ class _AudioPageState extends State<AudioPage> {
                             height: 120,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: _isRecording
+                              color: _controller.isRecording
                                   ? Colors.red
                                   : Colors.grey[300],
-                              boxShadow: _isRecording
+                              boxShadow: _controller.isRecording
                                   ? [
                                       BoxShadow(
                                         color: Colors.red.withOpacity(0.3),
@@ -141,18 +127,18 @@ class _AudioPageState extends State<AudioPage> {
                                   : null,
                             ),
                             child: IconButton(
-                              onPressed: _isRecording
+                              onPressed: _controller.isRecording
                                   ? _stopRecording
                                   : _startRecording,
                               icon: Icon(
-                                _isRecording ? Icons.stop : Icons.mic,
+                                _controller.isRecording ? Icons.stop : Icons.mic,
                                 size: 48,
                                 color: Colors.white,
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
-                          if (_isRecording) ...[
+                          if (_controller.isRecording) ...[
                             Text(
                               'Gravando...',
                               style: TextStyle(
@@ -162,7 +148,7 @@ class _AudioPageState extends State<AudioPage> {
                               ),
                             ),
                             Text(
-                              _formatDuration(_recordingDuration),
+                              _controller.formatDuration(_controller.recordingDuration),
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -182,7 +168,7 @@ class _AudioPageState extends State<AudioPage> {
               ),
             ),
             const SizedBox(height: 16),
-            if (_hasRecording) ...[
+            if (_controller.hasRecording) ...[
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -198,17 +184,17 @@ class _AudioPageState extends State<AudioPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           ElevatedButton.icon(
-                            onPressed: _isPlaying
+                            onPressed: _controller.isPlaying
                                 ? _stopPlaying
                                 : _playRecording,
                             icon: Icon(
-                              _isPlaying ? Icons.stop : Icons.play_arrow,
+                              _controller.isPlaying ? Icons.stop : Icons.play_arrow,
                             ),
-                            label: Text(_isPlaying ? 'Parar' : 'Reproduzir'),
+                            label: Text(_controller.isPlaying ? 'Parar' : 'Reproduzir'),
                           ),
                         ],
                       ),
-                      if (_isPlaying) ...[
+                      if (_controller.isPlaying) ...[
                         const SizedBox(height: 12),
                         const Center(
                           child: Text(
@@ -240,9 +226,10 @@ class _AudioPageState extends State<AudioPage> {
                     const Text(
                       '• Microfone: Sensor que captura ondas sonoras e converte em sinais elétricos\n'
                       '• Alto-falante: Dispositivo que converte sinais elétricos em ondas sonoras\n'
-                      '• Sampling Rate: Taxa de amostragem do áudio (ex: 44.1kHz)\n'
-                      '• Formatos: M4A, MP3, WAV, etc.\n'
-                      '• Permissões: Necessário solicitar acesso ao microfone',
+                      '• Codec AAC: Formato de compressão de áudio usado na gravação\n'
+                      '• Flutter Sound: Biblioteca para gravação e reprodução de áudio\n'
+                      '• Permissões: Acesso ao microfone solicitado automaticamente\n'
+                      '• Armazenamento: Arquivos salvos no diretório de documentos do app',
                       style: TextStyle(fontSize: 14),
                     ),
                   ],
