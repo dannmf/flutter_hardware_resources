@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
+import '../controllers/camera_controller.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -12,90 +10,67 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
-  CameraController? _cameraController;
-  List<CameraDescription>? _cameras;
-  bool _isCameraInitialized = false;
-  File? _capturedImage;
-  final ImagePicker _imagePicker = ImagePicker();
+  late CameraControllerService _controller;
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    _controller = CameraControllerService();
+    _controller.addListener(_onControllerUpdate);
+    _controller.initialize();
   }
 
-  Future<void> _initializeCamera() async {
-    await _requestPermissions();
-    
-    try {
-      _cameras = await availableCameras();
-      if (_cameras!.isNotEmpty) {
-        _cameraController = CameraController(
-          _cameras![0],
-          ResolutionPreset.medium,
-        );
-        
-        await _cameraController!.initialize();
-        setState(() {
-          _isCameraInitialized = true;
-        });
-      }
-    } catch (e) {
-      print('Erro ao inicializar câmera: $e');
-    }
-  }
-
-  Future<void> _requestPermissions() async {
-    await Permission.camera.request();
-    await Permission.storage.request();
-  }
-
-  Future<void> _takePicture() async {
-    if (_cameraController != null && _cameraController!.value.isInitialized) {
-      try {
-        final XFile image = await _cameraController!.takePicture();
-        setState(() {
-          _capturedImage = File(image.path);
-        });
-      } catch (e) {
-        print('Erro ao capturar imagem: $e');
-      }
-    }
-  }
-
-  Future<void> _pickImageFromGallery() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        setState(() {
-          _capturedImage = File(image.path);
-        });
-      }
-    } catch (e) {
-      print('Erro ao selecionar imagem: $e');
-    }
-  }
-
-  Future<void> _switchCamera() async {
-    if (_cameras != null && _cameras!.length > 1) {
-      final currentCameraIndex = _cameras!.indexOf(_cameraController!.description);
-      final newCameraIndex = (currentCameraIndex + 1) % _cameras!.length;
-      
-      await _cameraController!.dispose();
-      _cameraController = CameraController(
-        _cameras![newCameraIndex],
-        ResolutionPreset.medium,
-      );
-      
-      await _cameraController!.initialize();
+  void _onControllerUpdate() {
+    if (mounted) {
       setState(() {});
     }
   }
 
   @override
   void dispose() {
-    _cameraController?.dispose();
+    _controller.removeListener(_onControllerUpdate);
+    _controller.dispose();
     super.dispose();
+  }
+
+  void _showImagePreview() {
+    if (_controller.capturedImage != null) {
+      showModalBottomSheet(
+        useSafeArea: true,
+        context: context,
+        isScrollControlled: true,
+        builder: (_) {
+          return Center(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Pré-visualização',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 12),
+                  Image.file(_controller.capturedImage!, fit: BoxFit.contain),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Fechar'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  Future<void> _takePictureAndShow() async {
+    await _controller.takePicture();
+    if (mounted && _controller.capturedImage != null) {
+      _showImagePreview();
+    }
   }
 
   @override
@@ -107,53 +82,60 @@ class _CameraPageState extends State<CameraPage> {
         foregroundColor: Colors.white,
       ),
       body: Column(
+        spacing: 10,
         children: [
           Expanded(
             flex: 3,
-            child: _isCameraInitialized
+            child: _controller.isCameraInitialized
                 ? Stack(
+                    fit: StackFit.expand,
+
                     children: [
-                      CameraPreview(_cameraController!),
+                      FittedBox(
+                        fit: BoxFit.fitWidth, // ocupa largura inteira
+                        child: SizedBox(
+                          width: _controller.cameraController!.value.previewSize!.height,
+                          height: _controller.cameraController!.value.previewSize!.width,
+                          child: CameraPreview(_controller.cameraController!),
+                        ),
+                      ),
                       Positioned(
                         top: 16,
                         right: 16,
                         child: FloatingActionButton(
                           mini: true,
-                          onPressed: _switchCamera,
+                          onPressed: _controller.switchCamera,
                           child: const Icon(Icons.flip_camera_ios),
                         ),
                       ),
                     ],
                   )
-                : const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                : const Center(child: CircularProgressIndicator()),
           ),
+
           Container(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 FloatingActionButton(
-                  onPressed: _pickImageFromGallery,
+                  onPressed: _controller.pickImageFromGallery,
                   child: const Icon(Icons.photo_library),
                 ),
                 FloatingActionButton.large(
-                  onPressed: _takePicture,
+                  onPressed: _takePictureAndShow,
                   child: const Icon(Icons.camera_alt, size: 32),
                 ),
                 FloatingActionButton(
                   onPressed: () {
-                    setState(() {
-                      _capturedImage = null;
-                    });
+                    _controller.clearCapturedImage();
                   },
                   child: const Icon(Icons.delete),
                 ),
               ],
             ),
           ),
-          if (_capturedImage != null) ...[
+          if (_controller.capturedImage != null) ...[
             Expanded(
               flex: 2,
               child: Card(
@@ -163,50 +145,36 @@ class _CameraPageState extends State<CameraPage> {
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Text(
-                        'Imagem Capturada',
+                        textAlign: TextAlign.center,
+                        'Imagem Capturada (Clique para Expandir)',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
                     Expanded(
-                      child: Image.file(
-                        _capturedImage!,
-                        fit: BoxFit.contain,
+                      child: GestureDetector(
+                        onTap: () {
+                          // Ao clicar no preview pequeno → mostra modal
+                          showDialog(
+                            context: context,
+                            builder: (_) => Dialog(
+                              child: InteractiveViewer(
+                                // permite zoom com gesto
+                                child: Image.file(
+                                  _controller.capturedImage!,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Image.file(
+                          _controller.capturedImage!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ),
-            ),
-          ] else ...[
-            Expanded(
-              flex: 2,
-              child: Card(
-                margin: const EdgeInsets.all(16.0),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.photo_camera,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Nenhuma imagem capturada',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Use os botões abaixo para capturar\nou selecionar uma imagem',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -215,29 +183,7 @@ class _CameraPageState extends State<CameraPage> {
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16.0),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Conceitos de Câmera',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '• Resolução: Qualidade da imagem (ex: 1080p, 4K)\n'
-                  '• Autofoco: Ajuste automático do foco\n'
-                  '• Flash: Iluminação artificial para fotos\n'
-                  '• Zoom: Aproximação digital ou óptica',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
+        child: SizedBox(child: Padding(padding: const EdgeInsets.all(12.0))),
       ),
     );
   }
