@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'bluetooth_page.dart';
-import 'gps_page.dart';
-import 'wifi_page.dart';
-import 'accelerometer_page.dart';
-import 'audio_page.dart';
+import 'package:flutter_hardware_resources/pages/accelerometer_page.dart';
+import 'package:flutter_hardware_resources/pages/audio_page.dart';
+import 'package:flutter_hardware_resources/pages/bluetooth_page.dart';
+import 'package:flutter_hardware_resources/pages/gps_page.dart';
+import 'package:flutter_hardware_resources/pages/wifi_page.dart';
+
 import 'camera_page.dart';
 
 class HomePage extends StatelessWidget {
