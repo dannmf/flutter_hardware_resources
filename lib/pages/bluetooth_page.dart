@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:async';
+import '../controllers/bluetooth_controller.dart';
 
 class BluetoothPage extends StatefulWidget {
   const BluetoothPage({super.key});
@@ -11,104 +10,44 @@ class BluetoothPage extends StatefulWidget {
 }
 
 class _BluetoothPageState extends State<BluetoothPage> {
-  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
-  List<ScanResult> _scanResults = [];
-  bool _isScanning = false;
-  StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
-  StreamSubscription<List<ScanResult>>? _scanResultsSubscription;
+  late BluetoothController _controller;
 
   @override
   void initState() {
     super.initState();
-    _initBluetooth();
+    _controller = BluetoothController();
+    _controller.addListener(_onControllerUpdate);
+    _controller.initBluetooth();
   }
 
-  Future<void> _initBluetooth() async {
-    await _requestPermissions();
-    
-    // Obter estado inicial do adaptador
-    _adapterState = await FlutterBluePlus.adapterState.first;
-    setState(() {});
-    
-    // Escutar mudanças no estado do adaptador
-    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
-      setState(() {
-        _adapterState = state;
-      });
-    });
-
-    // Escutar resultados do scan
-    _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      setState(() {
-        _scanResults = results;
-      });
-    });
-  }
-
-  Future<void> _requestPermissions() async {
-    await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.bluetoothAdvertise,
-      Permission.location,
-    ].request();
+  void _onControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _startScan() async {
-    if (_adapterState != BluetoothAdapterState.on) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bluetooth deve estar ativado para buscar dispositivos')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isScanning = true;
-    });
-
-    try {
-      await FlutterBluePlus.startScan(
-        timeout: const Duration(seconds: 15),
-        androidUsesFineLocation: false,
-      );
-      
-      // Aguardar o scan terminar
-      await Future.delayed(const Duration(seconds: 15));
-      
-      setState(() {
-        _isScanning = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isScanning = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao buscar dispositivos: $e')),
-      );
+    final error = await _controller.startScan();
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
-
   Future<void> _turnOnBluetooth() async {
-    try {
-      if (await FlutterBluePlus.isSupported == false) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bluetooth não é suportado neste dispositivo')),
-        );
-        return;
-      }
-      await FlutterBluePlus.turnOn();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ative o Bluetooth manualmente nas configurações do sistema')),
-      );
+    final error = await _controller.turnOnBluetooth();
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
   @override
   void dispose() {
-    _adapterStateSubscription?.cancel();
-    _scanResultsSubscription?.cancel();
+    _controller.removeListener(_onControllerUpdate);
+    _controller.dispose();
     super.dispose();
   }
 
@@ -139,18 +78,22 @@ class _BluetoothPageState extends State<BluetoothPage> {
                     Row(
                       children: [
                         Icon(
-                          _adapterState == BluetoothAdapterState.on
+                          _controller.adapterState == BluetoothAdapterState.on
                               ? Icons.bluetooth
                               : Icons.bluetooth_disabled,
-                          color: _adapterState == BluetoothAdapterState.on
+                          color:
+                              _controller.adapterState ==
+                                  BluetoothAdapterState.on
                               ? Colors.blue
                               : Colors.grey,
                         ),
                         const SizedBox(width: 8),
-                        Text(_getAdapterStateText()),
+                        Text(_controller.getAdapterStateText()),
                         const Spacer(),
                         ElevatedButton(
-                          onPressed: _adapterState == BluetoothAdapterState.off
+                          onPressed:
+                              _controller.adapterState ==
+                                  BluetoothAdapterState.off
                               ? _turnOnBluetooth
                               : null,
                           child: const Text('Ativar'),
@@ -170,10 +113,12 @@ class _BluetoothPageState extends State<BluetoothPage> {
                 ),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: _adapterState == BluetoothAdapterState.on && !_isScanning
+                  onPressed:
+                      _controller.adapterState == BluetoothAdapterState.on &&
+                          !_controller.isScanning
                       ? _startScan
                       : null,
-                  child: _isScanning
+                  child: _controller.isScanning
                       ? const SizedBox(
                           width: 16,
                           height: 16,
@@ -185,125 +130,87 @@ class _BluetoothPageState extends State<BluetoothPage> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _adapterState != BluetoothAdapterState.on
+              child: _controller.adapterState != BluetoothAdapterState.on
                   ? const Center(
                       child: Text('Ative o Bluetooth para buscar dispositivos'),
                     )
-                  : _isScanning
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text('Buscando dispositivos...'),
-                            ],
-                          ),
-                        )
-                      : _scanResults.isEmpty
-                          ? const Center(
-                              child: Text('Nenhum dispositivo encontrado.\nToque em "Buscar" para procurar dispositivos.'),
-                            )
-                          : ListView.builder(
-                              itemCount: _scanResults.length,
-                              itemBuilder: (context, index) {
-                                final result = _scanResults[index];
-                                final device = result.device;
-                                return Card(
-                                  child: ListTile(
-                                    leading: Icon(_getDeviceIcon(device.platformName)),
-                                    title: Text(device.platformName.isNotEmpty 
-                                        ? device.platformName 
-                                        : 'Dispositivo Desconhecido'),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('MAC: ${device.remoteId}'),
-                                        Text('RSSI: ${result.rssi} dBm'),
-                                      ],
-                                    ),
-                                    trailing: result.device.isConnected
-                                        ? const Icon(Icons.link, color: Colors.green)
-                                        : const Icon(Icons.link_off, color: Colors.grey),
-                                    onTap: () async {
-                                      try {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Conectando a ${device.platformName}...')),
-                                        );
-                                        await device.connect();
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Conectado com sucesso!')),
-                                        );
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Erro ao conectar: $e')),
-                                        );
-                                      }
-                                    },
+                  : _controller.isScanning
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Buscando dispositivos...'),
+                        ],
+                      ),
+                    )
+                  : _controller.scanResults.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhum dispositivo encontrado.\nToque em "Buscar" para procurar dispositivos.',
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _controller.scanResults.length,
+                      itemBuilder: (context, index) {
+                        final result = _controller.scanResults[index];
+                        final device = result.device;
+                        return Card(
+                          child: ListTile(
+                            leading: Icon(
+                              _controller.getDeviceIcon(device.platformName),
+                            ),
+                            title: Text(
+                              device.platformName.isNotEmpty
+                                  ? device.platformName
+                                  : 'Dispositivo Desconhecido',
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('MAC: ${device.remoteId}'),
+                                Text('RSSI: ${result.rssi} dBm'),
+                              ],
+                            ),
+                            trailing: result.device.isConnected
+                                ? const Icon(Icons.link, color: Colors.green)
+                                : const Icon(
+                                    Icons.link_off,
+                                    color: Colors.grey,
+                                  ),
+                            onTap: () async {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Conectando a ${device.platformName}...',
+                                  ),
+                                ),
+                              );
+                              final error = await _controller.connectToDevice(
+                                device,
+                              );
+                              if (error == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Conectado com sucesso!'),
                                   ),
                                 );
-                              },
-                            ),
+                              } else {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(SnackBar(content: Text(error)));
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
             ),
             const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Conceitos de Bluetooth',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '• Pairing: Processo de autenticação entre dispositivos\n'
-                      '• MAC Address: Identificador único do dispositivo\n'
-                      '• Alcance: Tipicamente 10 metros (Classe 2)\n'
-                      '• Versões: 4.0 (LE), 5.0, 5.1, 5.2, etc.\n'
-                      '• Perfis: A2DP (áudio), HID (teclado/mouse), etc.',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
-  }
-
-  String _getAdapterStateText() {
-    switch (_adapterState) {
-      case BluetoothAdapterState.on:
-        return 'Ativado';
-      case BluetoothAdapterState.off:
-        return 'Desativado';
-      case BluetoothAdapterState.turningOn:
-        return 'Ativando...';
-      case BluetoothAdapterState.turningOff:
-        return 'Desativando...';
-      default:
-        return 'Desconhecido';
-    }
-  }
-
-  IconData _getDeviceIcon(String deviceName) {
-    final name = deviceName.toLowerCase();
-    if (name.contains('phone') || name.contains('iphone') || name.contains('android')) {
-      return Icons.smartphone;
-    } else if (name.contains('headphone') || name.contains('earphone') || name.contains('audio')) {
-      return Icons.headphones;
-    } else if (name.contains('tv') || name.contains('television')) {
-      return Icons.tv;
-    } else if (name.contains('computer') || name.contains('laptop') || name.contains('pc')) {
-      return Icons.computer;
-    } else if (name.contains('watch')) {
-      return Icons.watch;
-    } else {
-      return Icons.device_unknown;
-    }
   }
 }
