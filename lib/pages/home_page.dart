@@ -4,6 +4,8 @@ import 'package:flutter_hardware_resources/pages/audio_page.dart';
 import 'package:flutter_hardware_resources/pages/bluetooth_page.dart';
 import 'package:flutter_hardware_resources/pages/gps_page.dart';
 import 'package:flutter_hardware_resources/pages/wifi_page.dart';
+import 'package:flutter_hardware_resources/pages/motion_detector_page.dart';
+import 'package:flutter_hardware_resources/pages/rotation_detector_page.dart';
 
 import 'camera_page.dart';
 
@@ -82,14 +84,40 @@ class HomePage extends StatelessWidget {
                   ),
                   _buildHardwareCard(
                     context,
-                    'Acelerômetro',
-                    Icons.vibration,
+                    'Sensores',
+                    Icons.sensors,
                     Colors.purple,
-                    'Sensor de movimento e orientação',
+                    'Acelerômetro e Giroscópio (completo)',
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const AccelerometerPage(),
+                      ),
+                    ),
+                  ),
+                  _buildHardwareCard(
+                    context,
+                    'Detector Movimento',
+                    Icons.directions_run,
+                    Colors.blue,
+                    'Acelerômetro',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MotionDetectorPage(),
+                      ),
+                    ),
+                  ),
+                  _buildHardwareCard(
+                    context,
+                    'Detector Rotação',
+                    Icons.rotate_right,
+                    Colors.purple,
+                    'Giroscópio',
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RotationDetectorPage(),
                       ),
                     ),
                   ),
@@ -161,6 +189,8 @@ class HomePage extends StatelessWidget {
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
               Text(
