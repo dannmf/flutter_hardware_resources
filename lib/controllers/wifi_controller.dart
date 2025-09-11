@@ -34,7 +34,9 @@ class WifiController extends ChangeNotifier {
   }
 
   void _listenToConnectivityChanges() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      ConnectivityResult result,
+    ) {
       _connectionStatus = result;
       notifyListeners();
       _updateWifiInfo();
@@ -50,7 +52,9 @@ class WifiController extends ChangeNotifier {
       _connectionStatus = connectivityResult;
       await _updateWifiInfo();
     } catch (e) {
-      print('Erro ao verificar conectividade: $e');
+      if (kDebugMode) {
+        print('Erro ao verificar conectividade: $e');
+      }
     }
 
     _isChecking = false;
