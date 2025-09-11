@@ -177,7 +177,7 @@ class HomePage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withAlpha(1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, size: 32, color: color),

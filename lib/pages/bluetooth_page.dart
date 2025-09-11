@@ -190,6 +190,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                               final error = await _controller.connectToDevice(
                                 device,
                               );
+                              if (!context.mounted) return;
                               if (error == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -197,6 +198,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
                                   ),
                                 );
                               } else {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(
                                   context,
                                 ).showSnackBar(SnackBar(content: Text(error)));

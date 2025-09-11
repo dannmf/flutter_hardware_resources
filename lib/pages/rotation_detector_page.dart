@@ -117,8 +117,8 @@ class _RotationDetectorPageState extends State<RotationDetectorPage> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: _controller.isRotating
-                              ? Colors.orange.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
+                              ? Colors.orange.withAlpha(1)
+                              : Colors.grey.withAlpha(1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: _controller.isRotating
@@ -202,7 +202,7 @@ class _RotationDetectorPageState extends State<RotationDetectorPage> {
                       ),
                       const SizedBox(height: 16),
                       Center(
-                        child: Container(
+                        child: SizedBox(
                           width: 250,
                           height: 250,
                           child: CustomPaint(
@@ -219,7 +219,7 @@ class _RotationDetectorPageState extends State<RotationDetectorPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withAlpha(1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
@@ -334,14 +334,14 @@ class OrientationPainter extends CustomPainter {
 
     // Desenhar círculo base
     final basePaint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
+      ..color = Colors.grey.withAlpha(3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius, basePaint);
 
     // Desenhar linhas de referência
     final linePaint = Paint()
-      ..color = Colors.grey.withOpacity(0.5)
+      ..color = Colors.grey.withAlpha(5)
       ..strokeWidth = 1;
 
     canvas.drawLine(
@@ -422,7 +422,7 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
+      ..color = Colors.grey.withAlpha(3)
       ..strokeWidth = 1;
 
     // Desenhar grade

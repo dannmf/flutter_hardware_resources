@@ -84,34 +84,7 @@ class _CameraPageState extends State<CameraPage> {
       body: Column(
         spacing: 10,
         children: [
-          Expanded(
-            flex: 3,
-            child: _controller.isCameraInitialized
-                ? Stack(
-                    fit: StackFit.expand,
-
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.fitWidth, // ocupa largura inteira
-                        child: SizedBox(
-                          width: _controller.cameraController!.value.previewSize!.height,
-                          height: _controller.cameraController!.value.previewSize!.width,
-                          child: CameraPreview(_controller.cameraController!),
-                        ),
-                      ),
-                      Positioned(
-                        top: 16,
-                        right: 16,
-                        child: FloatingActionButton(
-                          mini: true,
-                          onPressed: _controller.switchCamera,
-                          child: const Icon(Icons.flip_camera_ios),
-                        ),
-                      ),
-                    ],
-                  )
-                : const Center(child: CircularProgressIndicator()),
-          ),
+          Expanded(flex: 3, child: _buildCameraWidget()),
 
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -119,14 +92,19 @@ class _CameraPageState extends State<CameraPage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 FloatingActionButton(
+                  heroTag: "gallery_button",
                   onPressed: _controller.pickImageFromGallery,
                   child: const Icon(Icons.photo_library),
                 ),
                 FloatingActionButton.large(
-                  onPressed: _takePictureAndShow,
+                  heroTag: "capture_button",
+                  onPressed: _controller.isCameraInitialized
+                      ? _takePictureAndShow
+                      : null,
                   child: const Icon(Icons.camera_alt, size: 32),
                 ),
                 FloatingActionButton(
+                  heroTag: "delete_button",
                   onPressed: () {
                     _controller.clearCapturedImage();
                   },
@@ -184,6 +162,88 @@ class _CameraPageState extends State<CameraPage> {
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16.0),
         child: SizedBox(child: Padding(padding: const EdgeInsets.all(12.0))),
+      ),
+    );
+  }
+
+  Widget _buildCameraWidget() {
+    if (_controller.isInitializing) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Inicializando câmera...'),
+          ],
+        ),
+      );
+    }
+
+    if (_controller.initializationError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.camera_alt_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              'Erro na câmera',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _controller.initializationError!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                _controller.initialize();
+              },
+              child: const Text('Tentar Novamente'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_controller.isCameraInitialized &&
+        _controller.cameraController != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          FittedBox(
+            fit: BoxFit.fitWidth,
+            child: SizedBox(
+              width: _controller.cameraController!.value.previewSize!.height,
+              height: _controller.cameraController!.value.previewSize!.width,
+              child: CameraPreview(_controller.cameraController!),
+            ),
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              heroTag: "switch_camera",
+              onPressed: _controller.switchCamera,
+              child: const Icon(Icons.flip_camera_ios),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.camera_alt_outlined, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text('Câmera não disponível'),
+        ],
       ),
     );
   }

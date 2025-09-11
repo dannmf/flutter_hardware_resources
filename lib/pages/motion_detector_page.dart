@@ -117,8 +117,8 @@ class _MotionDetectorPageState extends State<MotionDetectorPage> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: _controller.isMoving
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
+                              ? Colors.red.withAlpha(1)
+                              : Colors.grey.withAlpha(1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: _controller.isMoving
@@ -204,7 +204,7 @@ class _MotionDetectorPageState extends State<MotionDetectorPage> {
                       ),
                       const SizedBox(height: 16),
                       Center(
-                        child: Container(
+                        child: SizedBox(
                           width: 250,
                           height: 250,
                           child: CustomPaint(
@@ -222,8 +222,8 @@ class _MotionDetectorPageState extends State<MotionDetectorPage> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: _controller.isLevel
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.blue.withOpacity(0.1),
+                              ? Colors.green.withAlpha(1)
+                              : Colors.blue.withAlpha(25),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
@@ -344,14 +344,15 @@ class LevelPainter extends CustomPainter {
 
     // Desenhar círculo externo
     final outerPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
+      ..color = Colors.grey.withAlpha(25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius, outerPaint);
 
     // Desenhar linhas de referência
     final linePaint = Paint()
-      ..color = Colors.grey.withOpacity(0.5)
+      ..color = Colors.grey.withAlpha(25)
+      ..color = Colors.grey.withAlpha(128)
       ..strokeWidth = 1;
 
     // Linha horizontal
@@ -391,7 +392,7 @@ class LevelPainter extends CustomPainter {
 
     // Desenhar círculo central (zona nivelada)
     final centerPaint = Paint()
-      ..color = Colors.green.withOpacity(0.2)
+      ..color = Colors.green.withAlpha(51)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, 20, centerPaint);
 

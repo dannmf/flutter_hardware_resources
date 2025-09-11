@@ -28,49 +28,49 @@ class _AudioPageState extends State<AudioPage> {
   Future<void> _initializeAudio() async {
     final error = await _controller.initializeAudio();
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
   Future<void> _startRecording() async {
     final error = await _controller.startRecording();
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
   Future<void> _stopRecording() async {
     final error = await _controller.stopRecording();
     if (error == null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gravação concluída!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gravação concluída!')));
     } else if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
   Future<void> _playRecording() async {
     final error = await _controller.playRecording();
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
   Future<void> _stopPlaying() async {
     final error = await _controller.stopPlaying();
     if (error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -119,7 +119,7 @@ class _AudioPageState extends State<AudioPage> {
                               boxShadow: _controller.isRecording
                                   ? [
                                       BoxShadow(
-                                        color: Colors.red.withOpacity(0.3),
+                                        color: Colors.red.withAlpha(3),
                                         blurRadius: 20,
                                         spreadRadius: 5,
                                       ),
@@ -131,7 +131,9 @@ class _AudioPageState extends State<AudioPage> {
                                   ? _stopRecording
                                   : _startRecording,
                               icon: Icon(
-                                _controller.isRecording ? Icons.stop : Icons.mic,
+                                _controller.isRecording
+                                    ? Icons.stop
+                                    : Icons.mic,
                                 size: 48,
                                 color: Colors.white,
                               ),
@@ -148,7 +150,9 @@ class _AudioPageState extends State<AudioPage> {
                               ),
                             ),
                             Text(
-                              _controller.formatDuration(_controller.recordingDuration),
+                              _controller.formatDuration(
+                                _controller.recordingDuration,
+                              ),
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -188,9 +192,13 @@ class _AudioPageState extends State<AudioPage> {
                                 ? _stopPlaying
                                 : _playRecording,
                             icon: Icon(
-                              _controller.isPlaying ? Icons.stop : Icons.play_arrow,
+                              _controller.isPlaying
+                                  ? Icons.stop
+                                  : Icons.play_arrow,
                             ),
-                            label: Text(_controller.isPlaying ? 'Parar' : 'Reproduzir'),
+                            label: Text(
+                              _controller.isPlaying ? 'Parar' : 'Reproduzir',
+                            ),
                           ),
                         ],
                       ),
@@ -211,31 +219,6 @@ class _AudioPageState extends State<AudioPage> {
                 ),
               ),
             ],
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Conceitos de Áudio',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '• Microfone: Sensor que captura ondas sonoras e converte em sinais elétricos\n'
-                      '• Alto-falante: Dispositivo que converte sinais elétricos em ondas sonoras\n'
-                      '• Codec AAC: Formato de compressão de áudio usado na gravação\n'
-                      '• Flutter Sound: Biblioteca para gravação e reprodução de áudio\n'
-                      '• Permissões: Acesso ao microfone solicitado automaticamente\n'
-                      '• Armazenamento: Arquivos salvos no diretório de documentos do app',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
