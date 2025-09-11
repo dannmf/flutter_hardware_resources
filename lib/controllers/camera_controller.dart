@@ -10,45 +10,95 @@ class CameraControllerService extends ChangeNotifier {
   bool _isCameraInitialized = false;
   File? _capturedImage;
   final ImagePicker _imagePicker = ImagePicker();
+  String? _initializationError;
+  bool _isInitializing = false;
 
   // Getters
   CameraController? get cameraController => _cameraController;
   List<CameraDescription>? get cameras => _cameras;
   bool get isCameraInitialized => _isCameraInitialized;
   File? get capturedImage => _capturedImage;
+  String? get initializationError => _initializationError;
+  bool get isInitializing => _isInitializing;
 
   Future<void> initialize() async {
-    await _requestPermissions();
+    if (_isInitializing) return;
+    
+    _isInitializing = true;
+    _initializationError = null;
+    notifyListeners();
 
     try {
-      _cameras = await availableCameras();
-      if (_cameras!.isNotEmpty) {
-        _cameraController = CameraController(
-          _cameras![0],
-          ResolutionPreset.medium,
-        );
+      // Verificar permissões primeiro
+      final cameraPermission = await Permission.camera.status;
+      if (cameraPermission.isDenied) {
+        final result = await Permission.camera.request();
+        if (result.isDenied) {
+          _initializationError = 'Permissão da câmera negada';
+          _isInitializing = false;
+          notifyListeners();
+          return;
+        }
+      }
 
-        await _cameraController!.initialize();
-        _isCameraInitialized = true;
+      // Obter câmeras disponíveis
+      _cameras = await availableCameras();
+      
+      if (_cameras == null || _cameras!.isEmpty) {
+        _initializationError = 'Nenhuma câmera encontrada';
+        _isInitializing = false;
         notifyListeners();
+        return;
+      }
+
+      // Inicializar controller da câmera
+      _cameraController = CameraController(
+        _cameras![0],
+        ResolutionPreset.medium,
+        enableAudio: false, // Evita problemas de áudio
+      );
+
+      await _cameraController!.initialize();
+      
+      if (_cameraController!.value.isInitialized) {
+        _isCameraInitialized = true;
+        _initializationError = null;
+      } else {
+        _initializationError = 'Falha ao inicializar câmera';
       }
     } catch (e) {
-      print('Erro ao inicializar câmera: $e');
+      _initializationError = 'Erro ao inicializar câmera: ${e.toString()}';
+      if (kDebugMode) {
+        print('Erro detalhado: $e');
+      }
+      // Limpar recursos em caso de erro
+      await _cameraController?.dispose();
+      _cameraController = null;
+    } finally {
+      _isInitializing = false;
+      notifyListeners();
     }
   }
 
-  Future<void> _requestPermissions() async {
-    await Permission.camera.request();
-    await Permission.storage.request();
-  }
 
   Future<void> takePicture() async {
-    if (_cameraController != null && _cameraController!.value.isInitialized) {
-      try {
-        final XFile image = await _cameraController!.takePicture();
-        _capturedImage = File(image.path);
-        notifyListeners();
-      } catch (e) {
+    if (!_isCameraInitialized || _cameraController == null) {
+      if (kDebugMode) {
+        print('Câmera não inicializada');
+      }
+      return;
+    }
+
+    try {
+      if (_cameraController!.value.isTakingPicture) {
+        return; // Já está tirando foto
+      }
+
+      final XFile image = await _cameraController!.takePicture();
+      _capturedImage = File(image.path);
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
         print('Erro ao capturar imagem: $e');
       }
     }
@@ -64,25 +114,37 @@ class CameraControllerService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Erro ao selecionar imagem: $e');
+      if (kDebugMode) {
+        print('Erro ao selecionar imagem: $e');
+      }
     }
   }
 
   Future<void> switchCamera() async {
-    if (_cameras != null && _cameras!.length > 1) {
+    if (!_isCameraInitialized || _cameras == null || _cameras!.length <= 1) {
+      return;
+    }
+
+    try {
       final currentCameraIndex = _cameras!.indexOf(
         _cameraController!.description,
       );
       final newCameraIndex = (currentCameraIndex + 1) % _cameras!.length;
 
       await _cameraController!.dispose();
+      
       _cameraController = CameraController(
         _cameras![newCameraIndex],
         ResolutionPreset.medium,
+        enableAudio: false,
       );
 
       await _cameraController!.initialize();
       notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao trocar câmera: $e');
+      }
     }
   }
 
@@ -94,6 +156,8 @@ class CameraControllerService extends ChangeNotifier {
   @override
   void dispose() {
     _cameraController?.dispose();
+    _cameraController = null;
+    _isCameraInitialized = false;
     super.dispose();
   }
 }
