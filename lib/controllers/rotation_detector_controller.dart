@@ -7,21 +7,21 @@ class RotationDetectorController extends ChangeNotifier {
   double _gyroX = 0.0, _gyroY = 0.0, _gyroZ = 0.0;
   StreamSubscription<GyroscopeEvent>? _gyroscopeSubscription;
   bool _isMonitoring = false;
-  
+
   // Detector de rotação
   bool _isRotating = false;
   double _rotationThreshold = 0.5;
   String _rotationDirection = 'Parado';
-  
+
   // Orientação do dispositivo
   double _pitch = 0.0; // Rotação em X (inclinar para frente/trás)
-  double _roll = 0.0;  // Rotação em Y (inclinar para esquerda/direita)
-  double _yaw = 0.0;   // Rotação em Z (girar no plano horizontal)
-  
+  double _roll = 0.0; // Rotação em Y (inclinar para esquerda/direita)
+  double _yaw = 0.0; // Rotação em Z (girar no plano horizontal)
+
   // Contador de rotações
   int _rotationCount = 0;
   double _totalRotation = 0.0;
-  
+
   // Estabilizador visual
   double _stabilizedX = 0.0;
   double _stabilizedY = 0.0;
@@ -68,37 +68,51 @@ class RotationDetectorController extends ChangeNotifier {
     _isMonitoring = true;
     notifyListeners();
 
-    _gyroscopeSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
-      _gyroX = event.x;  // Pitch (rotação em torno do eixo X)
+    _gyroscopeSubscription = gyroscopeEventStream().listen((
+      GyroscopeEvent event,
+    ) {
+      _gyroX = event.x; // Pitch (rotação em torno do eixo X)
       _gyroY = -event.y; // Roll (rotação em torno do eixo Y) - invertido
-      _gyroZ = event.z;  // Yaw (rotação em torno do eixo Z)
-      
+      _gyroZ = event.z; // Yaw (rotação em torno do eixo Z)
+
       _detectRotation();
       _updateOrientation();
       _updateStabilizer();
-      
+
       notifyListeners();
     });
   }
 
   void _detectRotation() {
     // Calcula magnitude total da rotação
-    double rotationMagnitude = sqrt(_gyroX * _gyroX + _gyroY * _gyroY + _gyroZ * _gyroZ);
-    
+    double rotationMagnitude = sqrt(
+      _gyroX * _gyroX + _gyroY * _gyroY + _gyroZ * _gyroZ,
+    );
+
     _isRotating = rotationMagnitude > _rotationThreshold;
-    
+
     if (_isRotating) {
       // Determina direção principal da rotação
-      double maxRotation = [_gyroX.abs(), _gyroY.abs(), _gyroZ.abs()].reduce(max);
-      
+      double maxRotation = [
+        _gyroX.abs(),
+        _gyroY.abs(),
+        _gyroZ.abs(),
+      ].reduce(max);
+
       if (maxRotation == _gyroX.abs()) {
-        _rotationDirection = _gyroX > 0 ? 'Inclinando para baixo' : 'Inclinando para cima';
+        _rotationDirection = _gyroX > 0
+            ? 'Inclinando para baixo'
+            : 'Inclinando para cima';
       } else if (maxRotation == _gyroY.abs()) {
-        _rotationDirection = _gyroY > 0 ? 'Inclinando para direita' : 'Inclinando para esquerda';
+        _rotationDirection = _gyroY > 0
+            ? 'Inclinando para direita'
+            : 'Inclinando para esquerda';
       } else {
-        _rotationDirection = _gyroZ > 0 ? 'Girando horário' : 'Girando anti-horário';
+        _rotationDirection = _gyroZ > 0
+            ? 'Girando horário'
+            : 'Girando anti-horário';
       }
-      
+
       // Conta rotações significativas
       if (rotationMagnitude > _rotationThreshold * 2) {
         _rotationCount++;
@@ -113,11 +127,11 @@ class RotationDetectorController extends ChangeNotifier {
     // Integra as velocidades angulares para obter orientação aproximada
     // Nota: Esta é uma aproximação simples, não um sistema completo de orientação
     double dt = 0.1; // Aproximação do intervalo de tempo
-    
+
     _pitch += _gyroX * dt * 180 / pi; // Converte rad/s para graus
     _roll += _gyroY * dt * 180 / pi;
     _yaw += _gyroZ * dt * 180 / pi;
-    
+
     // Mantém os ângulos no range -180 a 180
     _pitch = _normalizeAngle(_pitch);
     _roll = _normalizeAngle(_roll);
@@ -134,8 +148,12 @@ class RotationDetectorController extends ChangeNotifier {
   }
 
   double _normalizeAngle(double angle) {
-    while (angle > 180) angle -= 360;
-    while (angle < -180) angle += 360;
+    while (angle > 180) {
+      angle -= 360;
+    }
+    while (angle < -180) {
+      angle += 360;
+    }
     return angle;
   }
 
