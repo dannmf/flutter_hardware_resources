@@ -4,12 +4,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 class GpsController extends ChangeNotifier {
   Position? _currentPosition;
   bool _isLoading = false;
   String _statusMessage = 'Toque no botão para obter localização';
-  MapController _mapController = MapController();
+  final MapController _mapController = MapController();
   List<Marker> _markers = [];
   String? _address;
   String? _postalCode;
@@ -96,7 +97,9 @@ class GpsController extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Erro ao buscar endereço: $e');
+      if (kDebugMode) {
+        print('Erro ao buscar endereço: $e');
+      }
       _address = 'Endereço não encontrado';
       _postalCode = 'CEP não encontrado';
       notifyListeners();
