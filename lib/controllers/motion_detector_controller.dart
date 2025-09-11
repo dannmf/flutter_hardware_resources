@@ -9,22 +9,22 @@ class MotionDetectorController extends ChangeNotifier {
   double _previousMagnitude = 0.0;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   bool _isMonitoring = false;
-  
+
   // Detector de movimento
   bool _isMoving = false;
   double _movementThreshold = 2.0;
   int _movementCount = 0;
-  
+
   // Detector de vibração
   bool _isVibrating = false;
   double _vibrationThreshold = 15.0;
-  List<double> _recentMagnitudes = [];
-  
+  final List<double> _recentMagnitudes = [];
+
   // Nível digital (como bolha de nível)
   double _tiltX = 0.0;
   double _tiltY = 0.0;
   bool _isLevel = false;
-  double _levelThreshold = 1.0;
+  final double _levelThreshold = 1.0;
 
   // Getters
   double get x => _x;
@@ -60,16 +60,18 @@ class MotionDetectorController extends ChangeNotifier {
     _isMonitoring = true;
     notifyListeners();
 
-    _accelerometerSubscription = accelerometerEvents.listen((AccelerometerEvent event) {
+    _accelerometerSubscription = accelerometerEventStream().listen((
+      AccelerometerEvent event,
+    ) {
       _x = event.x;
       _y = -event.y; // Invertido para corresponder à orientação da tela
       _z = event.z;
       _magnitude = sqrt(_x * _x + _y * _y + _z * _z);
-      
+
       _detectMovement();
       _detectVibration();
       _calculateTilt();
-      
+
       _previousMagnitude = _magnitude;
       notifyListeners();
     });
@@ -78,7 +80,7 @@ class MotionDetectorController extends ChangeNotifier {
   void _detectMovement() {
     // Detecta movimento baseado na mudança da magnitude
     double magnitudeChange = (_magnitude - _previousMagnitude).abs();
-    
+
     if (magnitudeChange > _movementThreshold) {
       if (!_isMoving) {
         _isMoving = true;
@@ -95,7 +97,7 @@ class MotionDetectorController extends ChangeNotifier {
     if (_recentMagnitudes.length > 10) {
       _recentMagnitudes.removeAt(0);
     }
-    
+
     // Calcula variação nas leituras recentes
     if (_recentMagnitudes.length >= 5) {
       double variance = _calculateVariance(_recentMagnitudes);
@@ -108,16 +110,18 @@ class MotionDetectorController extends ChangeNotifier {
     // Normaliza os valores para ângulos de inclinação
     _tiltX = (atan2(_x, sqrt(_y * _y + _z * _z)) * 180 / pi);
     _tiltY = (atan2(_y, sqrt(_x * _x + _z * _z)) * 180 / pi);
-    
+
     // Verifica se está nivelado (dentro do threshold)
     _isLevel = _tiltX.abs() < _levelThreshold && _tiltY.abs() < _levelThreshold;
   }
 
   double _calculateVariance(List<double> values) {
     if (values.isEmpty) return 0.0;
-    
+
     double mean = values.reduce((a, b) => a + b) / values.length;
-    double sumSquaredDiff = values.map((x) => pow(x - mean, 2).toDouble()).reduce((a, b) => a + b);
+    double sumSquaredDiff = values
+        .map((x) => pow(x - mean, 2).toDouble())
+        .reduce((a, b) => a + b);
     return sumSquaredDiff / values.length;
   }
 
