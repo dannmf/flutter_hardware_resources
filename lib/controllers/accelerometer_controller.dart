@@ -25,22 +25,24 @@ class AccelerometerController extends ChangeNotifier {
     _isMonitoring = true;
     notifyListeners();
 
-    _accelerometerSubscription = accelerometerEvents.listen((
+    _accelerometerSubscription = accelerometerEventStream().listen((
       AccelerometerEvent event,
     ) {
       // Corrigir orientação dos eixos conforme padrão Android/iOS
-      _x = event.x;  // Horizontal (esquerda/direita)
+      _x = event.x; // Horizontal (esquerda/direita)
       _y = -event.y; // Vertical (cima/baixo) - invertido
-      _z = event.z;  // Profundidade (frente/trás)
+      _z = event.z; // Profundidade (frente/trás)
       _magnitude = sqrt(_x * _x + _y * _y + _z * _z);
       notifyListeners();
     });
 
-    _gyroscopeSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
+    _gyroscopeSubscription = gyroscopeEventStream().listen((
+      GyroscopeEvent event,
+    ) {
       // Corrigir orientação dos eixos do giroscópio
-      _gyroX = event.x;  // Pitch (rotação em torno do eixo X)
+      _gyroX = event.x; // Pitch (rotação em torno do eixo X)
       _gyroY = -event.y; // Roll (rotação em torno do eixo Y) - invertido
-      _gyroZ = event.z;  // Yaw (rotação em torno do eixo Z)
+      _gyroZ = event.z; // Yaw (rotação em torno do eixo Z)
       notifyListeners();
     });
   }
